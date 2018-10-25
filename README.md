@@ -1,8 +1,6 @@
 # Rede de sensores
 
-
-
-O projeto tem como objetivo implementar uma rede de sensores doméstica, utilizando comunicação via rádio através do transciver nRF24l01+. Um nó da rede (master) será responsável por apresentar todos os dados recebidos dos sensores e configurar o intervalo de transmissão das mensagens enviadas pelos sensores. A exibição dos dados e a configuração desse parâmetro será realizada via serial, utilizando um monitor serial Desktop.
+O projeto tem como objetivo implementar uma rede de sensores doméstica, utilizando comunicação via rádio através do transceiver nRF24l01+. Um nó da rede (master) será responsável por apresentar todos os dados recebidos dos sensores e configurar o intervalo de transmissão das mensagens enviadas pelos sensores. A exibição dos dados e a configuração desse parâmetro será realizada via serial, utilizando um monitor serial Desktop.
 
 <img src="imgs/nRF24l01Plus.jpg" width="170"/> 
 
