@@ -10,6 +10,9 @@ Para criação da rede serão utilizadas as bibliotecas [RF24Network](https://tm
 
 
 ## Equipamentos
-
 - 6 x nRF24l01+
 - 5 sensores a serem definidos ao longo do projeto
+
+## Integrantes
+- [Anny Caroline](https://github.com/AnnyCaroline/)
+- [Wellington](https://github.com/wellington34226)
