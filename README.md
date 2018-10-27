@@ -11,4 +11,5 @@ Para criação da rede serão utilizadas as bibliotecas [RF24Network](https://tm
 
 ## Equipamentos
 
-- 4 x nRF24l01+
+- 6 x nRF24l01+
+- 5 sensores a serem definidos ao longo do projeto
