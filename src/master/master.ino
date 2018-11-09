@@ -25,12 +25,13 @@ void loop(void){
     payload_t payload;
     network.read(header,&payload,sizeof(payload));
     Serial.print("Received packet #");
-    Serial.print(payload.m_counter);
-    Serial.print(" from node ");
+    Serial.print(" from node:");
+    Serial.print(header.from_node,OCT);
+    Serial.print(" sensor:");
     Serial.print(payload.m_text);
-    Serial.print(", data: ");
+    Serial.print(" data: ");
     Serial.print(payload.m_data);
-    Serial.print(" at ");
+    Serial.print(" time:");
     Serial.println(payload.m_ms);
   }
 }
