@@ -20,8 +20,6 @@ void callback(){
   data += x;
   data += ",";
   data += y;
-  data += ",";
-  data += z;
   data += ")";
   if (sendMessage("rotation",data, network))
     Serial.println("ok");
