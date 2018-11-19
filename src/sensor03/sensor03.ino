@@ -1,17 +1,17 @@
-#include <Payload.h>
 #include <Sender.h>
-#include <RF24Network.h>
-#include <RF24.h>
-#include <SPI.h>
 #include <Wire.h>
 #include <I2Cdev.h>
 #include <MPU6050.h>
+#include <EEPROM.h>
 
 const uint16_t this_node   = 012;//sensor 3
 
-RF24 radio(7,8);
-RF24Network network(radio);
 MPU6050 accelgyro;
+unsigned int interval = 2000;//taxa de envio em segundos 1byte
+unsigned int sent = 0;//paotes enviados
+unsigned int received = 0;//pacotes recebidos
+unsigned int rtt = 0;//tempo de resposta millisegundos 4bytes
+unsigned int pdr = 0;//taxa de entrega recebidos/enviados% 4byte
 
 void callback(){
   int16_t x,y,z;
@@ -21,10 +21,16 @@ void callback(){
   data += ",";
   data += y;
   data += ")";
-  if (sendMessage("rotation",data, network))
+  if (sendMessage(received+1, rtt, pdr, interval,"rotation",data)){
+    sent++;
     Serial.println("ok");
-  else
+  }else
     Serial.println("error");
+}
+
+void printError(void){
+  Serial.println("\nEntrada inválida!");
+  Serial.print("Informe o endereço em octal com digitos entre 1 a 5 (zero somente no início), máximo de 4 algarismos [ex: 12,02134]:");
 }
 
 void setup(void){
@@ -87,12 +93,20 @@ void setup(void){
     Serial.print("\nNovo endereço salvo na EEPROM\nUtilizando endereço informado:");
   }
   Serial.println(address_node,OCT);
-  SPI.begin();
-  radio.begin();
-  network.begin(90, this_node);
+  beginNetwork(90,address_node);
 }
 
 void loop(){
-  network.update();
-  timer(2000, callback);
+  updateNetwork();
+  timer(interval, callback);
+  RF24NetworkHeader header;
+  payload_t payload;
+  if(receiveMessage(header,payload)){
+    rtt = payload.m_ms - millis();
+    received++;
+    pdr = ((float)received/(float)sent)*100;
+    if(payload.m_interval > 1000){
+      interval = payload.m_interval;
+    }
+  }
 }
