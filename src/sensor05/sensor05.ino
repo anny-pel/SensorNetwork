@@ -1,25 +1,30 @@
 #include <Payload.h>
 #include <Sender.h>
-#include <RF24Network.h>
-#include <RF24.h>
-#include <SPI.h>
 
 const uint16_t this_node   = 112;
 const uint8_t  sensor_port = A0;
 const uint8_t  red_led_port = 9;
-
-RF24 radio(7,8);
-RF24Network network(radio);
+unsigned int interval = 2000;//taxa de envio em segundos 1byte
+unsigned int sent = 0;//paotes enviados
+unsigned int received = 0;//pacotes recebidos
+unsigned int rtt = 0;//tempo de resposta millisegundos 4bytes
+unsigned int pdr = 0;//taxa de entrega recebidos/enviados% 4bytes
 
 void callback(){
   int data = digitalRead(sensor_port);
-  if (sendMessage("touch", String(data), network)){
+  if (sendMessage(received+1, rtt, pdr, interval,"touch", String(data))){
+    sent++;
     Serial.println("ok");
     digitalWrite(red_led_port, LOW); 
   }else{
     Serial.println("error");
     digitalWrite(red_led_port, HIGH);
   }
+}
+
+void printError(void){
+  Serial.println("\nEntrada inválida!");
+  Serial.print("Informe o endereço em octal com digitos entre 1 a 5 (zero somente no início), máximo de 4 algarismos [ex: 12,02134]:");
 }
 
 void setup(void){
@@ -79,15 +84,23 @@ void setup(void){
     Serial.print("\nNovo endereço salvo na EEPROM\nUtilizando endereço informado:");
   }
   Serial.println(address_node,OCT);
-  SPI.begin();
-  radio.begin();
-  network.begin(90, this_node);
+  beginNetwork(90,address_node);
 
   pinMode(sensor_port, INPUT);
   pinMode(red_led_port, OUTPUT);
 }
 
 void loop(){
-  network.update();
-  timer(1000, callback);
+  updateNetwork();
+  timer(interval, callback);
+  RF24NetworkHeader header;
+  payload_t payload;
+  if(receiveMessage(header,payload)){
+    rtt = payload.m_ms - millis();
+    received++;
+    pdr = ((float)received/(float)sent)*100;
+    if(payload.m_interval > 1000){
+      interval = payload.m_interval;
+    }
+  }
 }
