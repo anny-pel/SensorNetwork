@@ -98,7 +98,7 @@ void loop(){
   payload_t payload;
   //se receber a resposta: recalcula RTT e PDR, e atualiza o intervalo para o próximo envio
   if(receiveMessage(header,payload)){
-    rtt =  millis() - payload.m_ms;
+    rtt =  payload.m_ms - millis();
     received++;
     pdr = ((float)received/(float)sent)*100;
     if(payload.m_interval > 1000){
