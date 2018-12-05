@@ -55,16 +55,15 @@ void loop(void){
     RF24NetworkHeader header;
     payload_t payload;
     network.read(header,&payload,sizeof(payload));
-    String msg;
-    payload.toString(msg);
-    Serial.print("Received from node:");
-    Serial.print(header.from_node,OCT);
-    Serial.print(" ");
+    char buffer[7];
+    sprintf(buffer,"%05o ",header.from_node);
+    String msg{buffer};
+    payload.toStringFormated(msg);
     Serial.println(msg);
     //taxas de 250Kbps, 1Mbps ou 2Mbps, pacotes de 56bytes demoram aproximandamente 2ms por salto
     //cada salto acrescenta um delay de 5ms, quanto mais alto o nível maior a prioridade
     switch(getNivel(header.from_node)){
- case 1:
+      case 1:
         if(findAddress(header.from_node) < 0){
           nodes[index] = header.from_node;
           index++;
