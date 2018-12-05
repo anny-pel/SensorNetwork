@@ -44,4 +44,23 @@ struct payload_t {
     str += "\% intervalo:";
     str += m_interval;
   };
+  //facilitar impressão no master
+  void toStringFormated(String &str){
+    //sprintf();
+    char buffer[20];
+    sprintf(buffer,"%-5d ",m_counter);
+    str += buffer;
+    sprintf(buffer,"%-10lu ",m_ms);
+    str += buffer;
+    sprintf(buffer,"%-5u ",m_rtt);
+    str += buffer;
+    sprintf(buffer,"%-3u ",m_pdr);
+    str += buffer;
+    sprintf(buffer,"%-15s ",m_text);
+    str += buffer;
+    sprintf(buffer,"%-15s ",m_data);
+    str += buffer;
+    sprintf(buffer,"%-5u",m_interval);
+    str += buffer;
+  };
 };
