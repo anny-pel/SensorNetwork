@@ -4,18 +4,23 @@
 const uint16_t this_node   = 112;
 const uint8_t  sensor_port = A0;
 const uint8_t  red_led_port = 9;
-unsigned int interval = 2000;//taxa de envio em segundos 1byte
-unsigned int sent = 0;//paotes enviados
-unsigned int received = 0;//pacotes recebidos
-unsigned int rtt = 0;//tempo de resposta millisegundos 4bytes
-unsigned int pdr = 0;//taxa de entrega recebidos/enviados% 4bytes
+unsigned int interval     = 2000;//intervalo de envio das mensagens em millisegundos
+unsigned int milliseconds = 0;//contador em millisegundos, para gerar interrupção quando for igual ao intervalo
+unsigned int sent         = 0;//paotes enviados
+unsigned int received     = 0;//pacotes recebidos
+unsigned int rtt          = 0;//tempo de resposta millisegundos 4bytes
+unsigned int pdr          = 0;//taxa de entrega recebidos/enviados% 4bytes
+bool send                 = true;
+bool receive              = false;
 
 void callback(){
   int data = digitalRead(sensor_port);
   if (sendMessage(received+1, rtt, pdr, interval,"touch", String(data))){
     sent++;
     Serial.println("ok");
-    digitalWrite(red_led_port, LOW); 
+    send = false;
+    receive = true;
+    digitalWrite(red_led_port, LOW);
   }else{
     Serial.println("error");
     digitalWrite(red_led_port, HIGH);
@@ -88,19 +93,46 @@ void setup(void){
 
   pinMode(sensor_port, INPUT);
   pinMode(red_led_port, OUTPUT);
+  //Timer operando em modo CTC e Com saídas OC1A e OC1B desconectadas
+  //Compare Output Mode COM1A = 00 e WGM = 12 = 0xC
+  //TIMER COUNTER CONTROL REGISTER A >>>  COM2A|COM2A|COM2B|COM2B|     |     |WGM21|WGM20
+  //TIMER COUNTER CONTROL REGISTER B >>>  FOC2A|FOC2B|     |     |WGM22| CS22| CS21| CS20
+  //TIMER INTERRUPTION MASK          >>>       |     |     |     |     |OCIEB|OCIEA| TOIE
+  TCCR2A  = 0x02;//Modo CTC          >>>    0  |  0  |  0  |  0  |  0  |  0  |  1  |  0
+  TCCR2B  = 0x05;// Prescaler 128    >>>    0  |  0  |  0  |  0  |  0  |  1  |  0  |  1
+  //Definindo valor limite para comparação
+  OCR2B  = 0x7D;//contagem -->> (125*128*62,5)/1000000000 = 1ms
+  TCNT2  = 0x00;//iniciando contador
+  TIMSK2 = 0x04;//Habilita interrupção do Comparador da Saída B, foi usado o TIMER2 B pois a porta do TIMER2 A é utilizada pelo SPI  
 }
 
 void loop(){
   updateNetwork();
-  timer(interval, callback);
-  RF24NetworkHeader header;
-  payload_t payload;
-  if(receiveMessage(header,payload)){
-    rtt = payload.m_ms - millis();
-    received++;
-    pdr = ((float)received/(float)sent)*100;
-    if(payload.m_interval > 1000){
-      interval = payload.m_interval;
+  //timer(interval, callback);
+  if(send){
+    callback();
+  }
+  if(receive){
+    RF24NetworkHeader header;
+    payload_t payload;
+    //se receber a resposta: recalcula RTT e PDR, e atualiza o intervalo para o próximo envio
+    if(receiveMessage(header,payload)){
+      receive = false;
+      rtt =  millis() - payload.m_ms;
+      received++;
+      pdr = ((float)received/(float)sent)*100;
+      if(payload.m_interval > 1000){
+        interval = payload.m_interval;
+      }
     }
+  }
+}
+//Rotina de interrupção para contagem dos millisegundos
+ISR(TIMER2_COMPB_vect){
+  TCNT2 = 0x00;// Reinicializa o registrador do Timer2
+  milliseconds++;
+  if(milliseconds >= interval){
+    milliseconds = 0;
+    send = true;
   }
 }
