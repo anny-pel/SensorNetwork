@@ -8,7 +8,7 @@ RF24Network network(radio);
 
 const uint16_t master_node = 00;
 
-unsigned long last_sent;
+//unsigned long last_sent;
 
 //rotina para envio de mensagem
 bool sendMessage(unsigned int counter, unsigned int rtt, unsigned int pdr, unsigned int interval, String text, String data){
@@ -29,6 +29,7 @@ bool receiveMessage(RF24NetworkHeader &header,payload_t &payload){
 }
 
 //rotina para definir rotina de callback quando o intervalo termina
+/*
 void timer(const unsigned long interval, void (*callback_func)(void)){
   unsigned long now = millis();
   if (now - last_sent >= interval){
@@ -36,6 +37,7 @@ void timer(const unsigned long interval, void (*callback_func)(void)){
     last_sent = now;
   }
 };
+*/
 
 //atualiza a rede
 void updateNetwork(void){
