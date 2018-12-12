@@ -48,7 +48,7 @@ struct payload_t {
   void toStringFormated(String &str){
     //sprintf();
     char buffer[20];
-    sprintf(buffer,"%-5d ",m_counter);
+    sprintf(buffer,"%-5u ",m_counter);
     str += buffer;
     sprintf(buffer,"%-10lu ",m_ms);
     str += buffer;
