@@ -1,0 +1,76 @@
+#include "string.ceu"
+
+emit WINDOW_SET_TITLE("Sensor Network - estática");  // sets the window title
+
+//DUVIDA
+// data Node with
+//     var int x;
+//     var int y;
+//     // var int x, y; //não está funcionando
+
+//     pool[] LeafNode sons; //Como definir um data pool?
+// end
+
+code/await Node (pool&[] Node sons) -> (var int x, var int y, event int setX, event int setY, event none draw) -> NEVER do
+
+    x = 0;
+    y = 0;
+
+    x = await setX;
+    y = await setY;
+    await draw;
+    emit GRAPHICS_DRAW_RECT(x, y, 2, 2);
+
+    var&? Node son;
+    loop son in sons do
+        emit GRAPHICS_DRAW_LINE(x, y, son!.x, son!.y);
+    end
+
+    await FOREVER;
+end
+
+
+pool[] Node leafSon;
+
+pool[] Node sons00;
+spawn Node (&leafSon) in sons00;
+spawn Node (&leafSon) in sons00;
+
+pool[1] Node raiz;
+spawn Node (&sons00) in raiz;
+
+//calcula posicao -dfs
+var&? Node n;
+loop n in raiz do
+    emit n!.setX(0);
+    emit n!.setY(20);
+end
+
+var integer cont=0;
+loop n in sons00 do
+    emit n!.setX(-5+cont);
+    emit n!.setY(15);
+    cont = cont + 10;
+end
+
+//desenha
+var&? Node n;
+loop n in raiz do
+    emit n!.draw;
+end
+loop n in sons00 do
+    emit n!.draw;
+end
+
+//pintar filho de raiz
+var&? Node n;
+loop n in raiz do
+    var&? Node s;
+    loop s in n!.sons do
+        emit GRAPHICS_SET_COLOR_NAME(COLOR_RED);
+        emit GRAPHICS_DRAW_RECT(s!.x, s!.y, 2, 2);
+    end
+end
+
+
+await KEY_PRESS;
