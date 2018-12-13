@@ -1,0 +1,100 @@
+#include "string.ceu"
+
+#define SCALE 100
+#define HEIGHT 480
+#define PADDING 20
+
+emit WINDOW_SET_TITLE("Sensor Network");
+emit WINDOW_SET_GRID(yes);  //francisco
+emit WINDOW_SET_SIZE(640, HEIGHT, 640, HEIGHT);
+
+data Node with
+    var int endereco;
+    var int x;
+    var int y;
+
+    var&[] int control;
+    var&[] Node v;
+end 
+
+
+code/call/recursive Calc(var&? Node node, var int offset, var int level) -> int do
+    node!.y = (HEIGHT/2 - PADDING)-(level*SCALE);
+    var int fd = offset;
+    var int fe = offset;
+
+    var int i;
+    loop i in [0->4] do
+        if node!.control[i]==1 then
+            var Node noFilho = node!.v[i];
+            
+            var int tmp;
+            if 1<i then
+                tmp = 1;
+            else
+                tmp = i;
+            end
+
+            fd = call/recursive Calc(&noFilho,fd+tmp,level+1);
+        end
+    end 
+
+    if level==0 then
+        node!.x=10;
+    else    
+        node!.x=(((fd-fe)/2)+offset)*SCALE;
+    end
+    
+    // emit GRAPHICS_DRAW_PIXEL(node!.x, node!.y);
+    emit GRAPHICS_DRAW_RECT(node!.x, node!.y, 15, 15);
+
+    escape fd;
+end
+
+code/call/recursive Draw(var&? Node node) -> int do
+    emit GRAPHICS_DRAW_RECT(node!.x, node!.y, 15, 15);
+
+    var int i;
+    loop i in [0->4] do
+        if node!.control[i]==1 then
+            var Node noFilho = node!.v[i];
+            emit GRAPHICS_DRAW_LINE(node!.x, node!.y, noFilho.x, noFilho.y);
+            call/recursive Draw(&noFilho);
+        end
+    end 
+
+    escape 1;
+end
+
+
+
+//Criando a árvore
+var[1] Node leaf = [];
+var[5] int leafControl = [0,0,0,0,0];
+
+var Node f11 = val Node(11,_,_,&leafControl, &leaf);
+var[5] int n1Control = [1,0,0,0,0];
+var[5] Node n1Array = [f11];
+
+var Node f1 = val Node(1,_,_,&n1Control, &n1Array);
+var Node f2 = val Node(1,_,_,&leafControl, &leaf);
+var Node f3 = val Node(1,_,_,&leafControl, &leaf);
+var Node f4 = val Node(1,_,_,&leafControl, &leaf);
+var Node f5 = val Node(1,_,_,&leafControl, &leaf);
+var[5] int n0Control = [1,1,0,0,0];
+var[5] Node n0Array = [f1, f2, f3, f4, f5];
+var Node raiz = val Node(0,_,_,&n0Control, &n0Array);
+
+
+//Desenhando
+call/recursive Calc(&raiz,0,0);
+
+var int tmp = raiz.x;
+
+{
+    char str[12];
+    sprintf(str, "%d", @tmp);
+}
+emit GRAPHICS_WRITELN({str});
+
+//call/recursive Draw(&raiz);
