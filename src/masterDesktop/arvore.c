@@ -7,7 +7,7 @@
 #define PADDING 20
 #define DEBUG 1
 
- #define min(a,b) \
+#define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
@@ -62,10 +62,7 @@ void insert(struct node *p, struct node *i){
         p = pai->filhos[pos-1];
 
         if (p!=NULL)
-        insert(p, i);
-        
-
-        
+        insert(p, i);  
     }
 }
 
