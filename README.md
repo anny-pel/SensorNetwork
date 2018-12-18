@@ -28,4 +28,6 @@ Para criação da rede será utilizadas a biblioteca [RF24Network](https://tmrh2
 ## Aplicação desktop
 Desenvolvida em [pico-Céu](https://github.com/ceu-lang/pico-ceu), a aplicação desktop apresenta, em tempo real, a árvore de sensores e o conteúdo dos últimos pacotes enviados.
 
+## Payload e Sender
+Códigos repetitivos foram encapsulados em duas bibliotecas: a Payload, que fornece a estrutura do pacote, e a Sender, que armazena métodos comuns a todos os nós sensores (todos os nós menos o raiz).
 
