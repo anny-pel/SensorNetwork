@@ -1,5 +1,5 @@
-#include <Payload.h>
 #include <Sender.h>
+#include <EEPROM.h>
 
 const uint16_t this_node   = 01;
 const uint8_t  sensor_port = 4;
@@ -15,7 +15,7 @@ bool receive              = false;
 
 void callback(){
   int data = digitalRead(sensor_port);
-  if (sendMessage(received+1, rtt, pdr, interval,"inclinacao",String(data), network))
+  if (sendMessage(received+1, rtt, pdr, interval,"inclinacao",String(data)))
     sent++;
     Serial.println("ok");
     send = false;
