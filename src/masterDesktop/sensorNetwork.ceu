@@ -1,100 +1,305 @@
+#include "usart.ceu"
 #include "string.ceu"
 
+#define WINDOW_W  900
+#define WINDOW_H 300
+
+#define NODE_SIZE 15
+#define NODE_PADDING 20
+
+#define OFFSET 50
 #define SCALE 100
-#define HEIGHT 480
-#define PADDING 20
 
-emit WINDOW_SET_TITLE("Sensor Network");
-emit WINDOW_SET_GRID(yes);  //francisco
-emit WINDOW_SET_SIZE(640, HEIGHT, 640, HEIGHT);
+#define X00  -50
+#define Y00  WINDOW_H/2 - OFFSET
 
-data Node with
-    var int endereco;
-    var int x;
-    var int y;
+#define X01  X00-SCALE
+#define Y01  WINDOW_H/2 - SCALE - OFFSET
 
-    var&[] int control;
-    var&[] Node v;
-end 
+#define X011 X01-SCALE
+#define Y011 WINDOW_H/2 - 2*SCALE - OFFSET
 
+#define X02  X00+2*SCALE
+#define Y02  WINDOW_H/2 - SCALE - OFFSET
 
-code/call/recursive Calc(var&? Node node, var int offset, var int level) -> int do
-    node!.y = (HEIGHT/2 - PADDING)-(level*SCALE);
-    var int fd = offset;
-    var int fe = offset;
+#define X012 X02-SCALE
+#define Y012 WINDOW_H/2 - 2*SCALE - OFFSET
 
-    var int i;
-    loop i in [0->4] do
-        if node!.control[i]==1 then
-            var Node noFilho = node!.v[i];
-            
-            var int tmp;
-            if 1<i then
-                tmp = 1;
-            else
-                tmp = i;
-            end
+#define X022 X02+SCALE
+#define Y022 WINDOW_H/2 - 2*SCALE - OFFSET
 
-            fd = call/recursive Calc(&noFilho,fd+tmp,level+1);
+var[5] bool actives = [false, false, false, false, false];
+
+emit WINDOW_SET_TITLE("Sensor Network");  // sets the window title
+emit WINDOW_SET_SIZE(WINDOW_W, WINDOW_H, WINDOW_W, WINDOW_H);
+
+await 1s; //check
+
+spawn Usart(9);
+await 2s;
+
+code/await DrawNode(var&[] byte adress,
+                    var&[] byte counter,
+                    var&[] byte ms,
+                    var&[] byte rtt,
+                    var&[] byte pdr,
+                    var&[] byte texto,
+                    var&[] byte dado,
+                    var&[] byte interval) -> NEVER do
+
+    var int x = _;
+    var int y = _;
+    var int text_x = _;
+    var int text_y = y+75;
+    var bool text_right = _;
+
+    if (call String_Compare(&adress, "00001") == 0) then
+        x = X01;
+        y = Y01;
+        text_x = x - NODE_SIZE - NODE_PADDING - 150;
+        text_y = y+75;
+        text_right = true;
+        
+        emit GRAPHICS_DRAW_LINE(x, y+NODE_SIZE, X00, Y00);
+        outer.actives[0]=true;
+
+    else/if (call String_Compare(&adress, "00002") == 0) then
+        x = X02;
+        y = Y02;
+        text_x = x + NODE_SIZE + NODE_PADDING;
+        text_y = y+75;
+        text_right = false;
+
+        emit GRAPHICS_DRAW_LINE(x, y+NODE_SIZE, X00, Y00);
+        outer.actives[1]=true;
+
+    else/if (call String_Compare(&adress, "00011") == 0) then
+        x = X011;
+        y = Y011;
+        text_x = x - NODE_SIZE - NODE_PADDING - 150;
+        text_y = y+75;
+        text_right = true;
+
+        emit GRAPHICS_DRAW_LINE(x, y+NODE_SIZE, X01, Y01);
+        outer.actives[2]=true;
+
+        if (outer.actives[0]==false) then //se o pai não existe
+            emit GRAPHICS_SET_COLOR_NAME(COLOR_RED);
+            emit GRAPHICS_DRAW_LINE(X01, Y01+NODE_SIZE, X00, Y00);            
+            emit GRAPHICS_DRAW_RECT(X01, Y01, NODE_SIZE, NODE_SIZE);
+            emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
+            outer.actives[0]=true;            
         end
-    end 
 
-    if level==0 then
-        node!.x=10;
-    else    
-        node!.x=(((fd-fe)/2)+offset)*SCALE;
+    else/if (call String_Compare(&adress, "00012") == 0) then
+        x = X012;
+        y = Y012;
+        text_x = x - NODE_SIZE - NODE_PADDING - 150;
+        text_y = y+75;
+        text_right = true;
+
+        emit GRAPHICS_DRAW_LINE(x, y+NODE_SIZE, X02,Y02);  
+        outer.actives[3]=true;
+
+        if (outer.actives[1]==false) then //se o pai não existe
+            emit GRAPHICS_SET_COLOR_NAME(COLOR_RED);
+            emit GRAPHICS_DRAW_LINE(X02, Y02+NODE_SIZE, X00, Y00);            
+            emit GRAPHICS_DRAW_RECT(X02, Y02, NODE_SIZE, NODE_SIZE);
+            emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
+            outer.actives[1]=true;
+        end        
+        
+    else/if (call String_Compare(&adress, "00022") == 0) then
+        x = X022;
+        y = Y022;
+        text_x = x + NODE_SIZE + NODE_PADDING;
+        text_y = y+75;
+        text_right = false;
+        
+        emit GRAPHICS_DRAW_LINE(x, y+NODE_SIZE, X02,Y02);  
+        outer.actives[4]=true;
+
+        if (outer.actives[1]==false) then //se o pai não existe
+            emit GRAPHICS_SET_COLOR_NAME(COLOR_RED);
+            emit GRAPHICS_DRAW_LINE(X02, Y02+NODE_SIZE, X00, Y00);            
+            emit GRAPHICS_DRAW_RECT(X02, Y02, NODE_SIZE, NODE_SIZE);
+            emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
+            outer.actives[1]=true;
+        end                    
+    end    
+
+    emit GRAPHICS_DRAW_RECT(x, y, NODE_SIZE, NODE_SIZE);
+
+    if (text_right) then
+        emit GRAPHICS_SET_ANCHOR(HANCHOR_RIGHT, VANCHOR_TOP);
+        text_x = text_x + 150;  
+    else
+        emit GRAPHICS_SET_ANCHOR(HANCHOR_LEFT, VANCHOR_TOP);
     end
     
-    // emit GRAPHICS_DRAW_PIXEL(node!.x, node!.y);
-    emit GRAPHICS_DRAW_RECT(node!.x, node!.y, 15, 15);
+    emit GRAPHICS_SET_COLOR_NAME(COLOR_BLACK);
+    emit GRAPHICS_DRAW_RECT(text_x, text_y, 150, 100);
+    emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
 
-    escape fd;
+    emit GRAPHICS_SET_WRITE_CURSOR(text_x, text_y);
+
+    var[100] byte buffer;
+
+    call String_Append_STR(&buffer, &&adress[0] as _char&&);
+    call String_Append_STR(&buffer, " - ");
+    call String_Append_STR(&buffer, &&texto[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;
+
+    emit GRAPHICS_WRITELN("-----------");
+
+    call String_Append_STR(&buffer, "dado: ");
+    call String_Append_STR(&buffer, &&dado[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;
+
+    call String_Append_STR(&buffer, "mensagens enviadas: ");
+    call String_Append_STR(&buffer, &&counter[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;
+
+    call String_Append_STR(&buffer, "tempo de envio: ");
+    call String_Append_STR(&buffer, &&ms[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;
+
+    call String_Append_STR(&buffer, "rtt: ");
+    call String_Append_STR(&buffer, &&rtt[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;
+
+    call String_Append_STR(&buffer, "pdr: ");
+    call String_Append_STR(&buffer, &&pdr[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;    
+
+    call String_Append_STR(&buffer, "intervalo: ");
+    call String_Append_STR(&buffer, &&interval[0] as _char&&);
+    emit GRAPHICS_WRITELN(&&buffer[0] as _char&&);
+    $buffer = 0;
+
+    emit GRAPHICS_SET_ANCHOR(HANCHOR_CENTER, VANCHOR_BOTTOM);
+
+    await FOREVER;
 end
 
-code/call/recursive Draw(var&? Node node) -> int do
-    emit GRAPHICS_DRAW_RECT(node!.x, node!.y, 15, 15);
+//draw master
+emit GRAPHICS_SET_ANCHOR(HANCHOR_CENTER, VANCHOR_BOTTOM);
+emit GRAPHICS_DRAW_RECT(X00, Y00, NODE_SIZE, NODE_SIZE);
 
-    var int i;
-    loop i in [0->4] do
-        if node!.control[i]==1 then
-            var Node noFilho = node!.v[i];
-            emit GRAPHICS_DRAW_LINE(node!.x, node!.y, noFilho.x, noFilho.y);
-            call/recursive Draw(&noFilho);
-        end
-    end 
+//00001
+// do
+// var[6] byte adress;
+// call String_Append_STR(&adress, "00001");
+// var[2] byte nada;
+// call String_Append_STR(&nada, "n");
+// spawn DrawNode(&adress, &nada, &nada, &nada, &nada, &nada, &nada, &nada);
+// end
 
-    escape 1;
+// //00002
+// do
+// var[6] byte adress;
+// call String_Append_STR(&adress, "00002");
+// var[2] byte nada;
+// call String_Append_STR(&nada, "n");
+// spawn DrawNode(&adress, &nada, &nada, &nada, &nada, &nada, &nada, &nada);
+// end
+
+// //00011
+// do
+// var[6] byte adress;
+// call String_Append_STR(&adress, "00011");
+// var[2] byte nada;
+// call String_Append_STR(&nada, "n");
+// spawn DrawNode(&adress, &nada, &nada, &nada, &nada, &nada, &nada, &nada);
+// end
+
+// //00012
+// do
+// var[6] byte adress;
+// call String_Append_STR(&adress, "00012");
+// var[2] byte nada;
+// call String_Append_STR(&nada, "n");
+// spawn DrawNode(&adress, &nada, &nada, &nada, &nada, &nada, &nada, &nada);
+// end
+
+// //00022
+// do
+// var[6] byte adress;
+// call String_Append_STR(&adress, "00022");
+// var[2] byte nada;
+// call String_Append_STR(&nada, "n");
+// spawn DrawNode(&adress, &nada, &nada, &nada, &nada, &nada, &nada, &nada);
+// end
+
+loop do
+    var[72] byte buffer;
+
+    await Usart_RX(&buffer, 72);
+
+    //_printf("\n> Received the string: ");
+
+
+    var[6] byte adress;
+    var[6] byte counter;
+    var[11] byte ms;
+    var[6] byte rtt;
+    var[4] byte pdr;
+    var[16] byte texto;
+    var[16] byte dado;
+    var[6] byte interval;
+
+    call String_Substr(&buffer, &adress, 0, 5);
+    call String_Substr(&buffer, &counter, 6, 5);
+    call String_Substr(&buffer, &ms, 12, 10);
+    call String_Substr(&buffer, &rtt, 23, 5);
+    call String_Substr(&buffer, &pdr, 29, 3);
+    call String_Substr(&buffer, &texto, 33, 15);  
+    call String_Substr(&buffer, &dado, 49, 15);
+    call String_Substr(&buffer, &interval, 65, 5);       
+
+    call String_TrimR(&counter);
+    call String_TrimR(&ms);
+    call String_TrimR(&rtt);
+    call String_TrimR(&pdr);
+    call String_TrimR(&texto);
+    call String_TrimR(&dado);
+    call String_TrimR(&interval);
+
+    
+
+    // _printf("\n\n");
+    // _printf("[");
+    // call String_Print(&adress);
+    // _printf("]");
+    // _printf("\n\n");
+    // call String_Print(&counter);
+    // _printf("\n\n");
+    // call String_Print(&ms);
+    // _printf("\n\n");
+    // _printf("[");
+    // call String_Print(&rtt);
+    // _printf("]");
+    // _printf("\n\n");
+    // _printf("\n\n");
+    // call String_Print(&pdr);
+    // _printf("\n\n");
+    // call String_Print(&texto);
+    // _printf("\n\n");
+    // call String_Print(&dado);
+    // _printf("\n\n");
+    // call String_Print(&interval);
+	
+
+    spawn DrawNode(&adress, &counter, &ms, &rtt, &pdr, &texto, &dado, &interval);
+	
+	var[72] byte buffer2;
+	call String_Substr(&buffer, &buffer2, 0, 71);
+	call String_Print(&buffer2);
+	_printf("\n");
 end
-
-
-
-//Criando a árvore
-var[1] Node leaf = [];
-var[5] int leafControl = [0,0,0,0,0];
-
-var Node f11 = val Node(11,_,_,&leafControl, &leaf);
-var[5] int n1Control = [1,0,0,0,0];
-var[5] Node n1Array = [f11];
-
-var Node f1 = val Node(1,_,_,&n1Control, &n1Array);
-var Node f2 = val Node(1,_,_,&leafControl, &leaf);
-var Node f3 = val Node(1,_,_,&leafControl, &leaf);
-var Node f4 = val Node(1,_,_,&leafControl, &leaf);
-var Node f5 = val Node(1,_,_,&leafControl, &leaf);
-var[5] int n0Control = [1,1,0,0,0];
-var[5] Node n0Array = [f1, f2, f3, f4, f5];
-var Node raiz = val Node(0,_,_,&n0Control, &n0Array);
-
-
-//Desenhando
-call/recursive Calc(&raiz,0,0);
-
-var int tmp = raiz.x;
-
-{
-    char str[12];
-    sprintf(str, "%d", @tmp);
-}
-emit GRAPHICS_WRITELN({str});
-
-//call/recursive Draw(&raiz);
