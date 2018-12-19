@@ -1,5 +1,5 @@
-#include <Payload.h>
 #include <Sender.h>
+#include <EEPROM.h>
 
 const uint16_t this_node   = 112;
 const uint8_t  sensor_port = A0;
