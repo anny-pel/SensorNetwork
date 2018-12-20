@@ -1,12 +1,7 @@
 #include <Sender.h>
-#include <Wire.h>
-#include <I2Cdev.h>
-#include <MPU6050.h>
 #include <EEPROM.h>
 
-const uint16_t this_node   = 012;//sensor 3
-
-MPU6050 accelgyro;
+const uint16_t this_node  = 012;
 unsigned int interval     = 2000;//intervalo de envio das mensagens em millisegundos
 unsigned int milliseconds = 0;//contador em millisegundos, para gerar interrupção quando for igual ao intervalo
 unsigned int sent         = 0;//paotes enviados
@@ -17,34 +12,34 @@ bool send                 = true;
 bool receive              = false;
 
 void callback(){
-  int16_t x,y,z;
-  accelgyro.getRotation(&x, &y, &z);
-  String data = "(";
-  data += x;
-  data += ",";
-  data += y;
-  data += ")";
-  if (sendMessage(received+1, rtt, pdr, interval,"rotation",data)){
+  //digitalRead(4);
+  String data;
+  if((~PIND & (1 << PD4)) >> PD4){
+    data = "detected";
+  }else{
+    data = "not detected";
+  }
+  if (sendMessage(received+1, rtt, pdr, interval,"obstacle",data)){
     sent++;
     Serial.println("ok");
     send = false;
     receive = true;    
-  }else
+  }else{
     Serial.println("error");
+  }
 }
 
-void printError(void){
-  Serial.println("\nEntrada inválida!");
+//rotina para impressão do menu de configuração do endereço
+void printError(){
+  Serial.println("\nEntrada inválida!!");
   Serial.print("Informe o endereço em octal com digitos entre 1 a 5 (zero somente no início), máximo de 4 algarismos [ex: 12,02134]:");
 }
 
 void setup(void){
+  DDRD  &= ~(1 << PD4);PORTD &= ~(1 << PD4);//pinMode(4,INPUT);
   Serial.begin(115200);
-  Serial.println("Nó 03 - sensor de movimento - giroscópio");
-  Wire.begin();
-  accelgyro.initialize();
-  Serial.println(accelgyro.testConnection() ? "Giroscópio connection successful" : "Giroscópio connection failed");
-  
+  Serial.println("No 012 - sensor de obstáculo - infravermelho");
+
   uint16_t address_node = 0;
   uint16_t bufAddress = 0;
 
@@ -142,4 +137,3 @@ ISR(TIMER2_COMPB_vect){
     send = true;
   }
 }
-

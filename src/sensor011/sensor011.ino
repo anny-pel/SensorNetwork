@@ -4,7 +4,7 @@
 #include <MPU6050.h>
 #include <EEPROM.h>
 
-const uint16_t this_node   = 04;//sensor 4
+const uint16_t this_node   = 011;//sensor 3
 
 MPU6050 accelgyro;
 unsigned int interval     = 2000;//intervalo de envio das mensagens em millisegundos
@@ -17,24 +17,30 @@ bool send                 = true;
 bool receive              = false;
 
 void callback(){
+  int16_t x,y,z;
+  accelgyro.getRotation(&x, &y, &z);
   String data = "(";
-  data += accelgyro.getAccelerationX();
+  data += x;
   data += ",";
-  data += accelgyro.getAccelerationY();
+  data += y;
   data += ")";
-  if (sendMessage(received+1, rtt, pdr, interval,"acceleration",data)){
+  if (sendMessage(received+1, rtt, pdr, interval,"rotation",data)){
     sent++;
     Serial.println("ok");
     send = false;
     receive = true;    
-  }else{
+  }else
     Serial.println("error");
-  }
+}
+
+void printError(void){
+  Serial.println("\nEntrada inválida!");
+  Serial.print("Informe o endereço em octal com digitos entre 1 a 5 (zero somente no início), máximo de 4 algarismos [ex: 12,02134]:");
 }
 
 void setup(void){
   Serial.begin(115200);
-  Serial.println("Nó 03 - sensor de movimento - giroscópio");
+  Serial.println("Nó 011 - sensor de movimento - giroscópio");
   Wire.begin();
   accelgyro.initialize();
   Serial.println(accelgyro.testConnection() ? "Giroscópio connection successful" : "Giroscópio connection failed");

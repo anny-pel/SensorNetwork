@@ -1,7 +1,9 @@
 #include <Sender.h>
 #include <EEPROM.h>
 
-const uint16_t this_node  = 02;
+const uint16_t this_node   = 02;
+const uint8_t  sensor_port = A0;
+const uint8_t  red_led_port = 9;
 unsigned int interval     = 2000;//intervalo de envio das mensagens em millisegundos
 unsigned int milliseconds = 0;//contador em millisegundos, para gerar interrupção quando for igual ao intervalo
 unsigned int sent         = 0;//paotes enviados
@@ -12,34 +14,28 @@ bool send                 = true;
 bool receive              = false;
 
 void callback(){
-  //digitalRead(4);
-  String data;
-  if((~PIND & (1 << PD4)) >> PD4){
-    data = "detected";
-  }else{
-    data = "not detected";
-  }
-  if (sendMessage(received+1, rtt, pdr, interval,"obstacle",data)){
+  int data = digitalRead(sensor_port);
+  if (sendMessage(received+1, rtt, pdr, interval,"touch", String(data))){
     sent++;
     Serial.println("ok");
     send = false;
-    receive = true;    
+    receive = true;
+    digitalWrite(red_led_port, LOW);
   }else{
     Serial.println("error");
+    digitalWrite(red_led_port, HIGH);
   }
 }
 
-//rotina para impressão do menu de configuração do endereço
-void printError(){
-  Serial.println("\nEntrada inválida!!");
+void printError(void){
+  Serial.println("\nEntrada inválida!");
   Serial.print("Informe o endereço em octal com digitos entre 1 a 5 (zero somente no início), máximo de 4 algarismos [ex: 12,02134]:");
 }
 
 void setup(void){
-  DDRD  &= ~(1 << PD4);PORTD &= ~(1 << PD4);//pinMode(4,INPUT);
-  Serial.begin(115200);
-  Serial.println("No 02 - sensor de obstáculo - infravermelho");
-
+  Serial.begin(57600);
+  Serial.println("No 02 - sensor touch capacitivo");
+  
   uint16_t address_node = 0;
   uint16_t bufAddress = 0;
 
@@ -94,6 +90,9 @@ void setup(void){
   }
   Serial.println(address_node,OCT);
   beginNetwork(90,address_node);
+
+  pinMode(sensor_port, INPUT);
+  pinMode(red_led_port, OUTPUT);
   //Timer operando em modo CTC e Com saídas OC1A e OC1B desconectadas
   //Compare Output Mode COM1A = 00 e WGM = 12 = 0xC
   //TIMER COUNTER CONTROL REGISTER A >>>  COM2A|COM2A|COM2B|COM2B|     |     |WGM21|WGM20
