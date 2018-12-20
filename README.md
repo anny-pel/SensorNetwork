@@ -11,6 +11,8 @@ Por fim, como último requisito, os dados enviados pelo nó sorvedouro via seria
 
 ## RF24Network
 
+<img src="imgs/arvore.png" width="170" align="left"/> 
+
 A biblioteca [RF24Network](https://tmrh20.github.io/RF24Network/) implementa a camada de rede do modelo OSI utilizando transceptores nRF24L01+. Oferece fragmentação e reconstrução de pacotes, transmissão de dados via múltiplos saltos, roteamento automático e organiza seus nós em uma topologia de árvore. Cada nó pode se comunicar com até cinco filhos (devido à limitação do próprio transceptor, que só pode se comunicar com até seis nós), e a árvore possui altura máxima igual a cinco, totalizando 781 nós.
 
 Cada nó deve receber um endereço composto de no máximo quatro dígitos, de 1 a 5. Conforme mostra a figura ao lado, a quantidade de dígitos reflete o nível em que o nó se encontra na árvore, o primeiro dígito informa qual seu índice como filho, e os últimos, qual o endereço de seu nó pai. 31, por exemplo é o terceiro filho do nó, e está no nível 2 da árvore.  
