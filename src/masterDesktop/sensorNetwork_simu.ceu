@@ -1,0 +1,260 @@
+#include "string.ceu"
+
+#define WINDOW_W  900
+#define WINDOW_H 500
+
+emit WINDOW_SET_TITLE("Sensor Network");  // sets the window title
+emit WINDOW_SET_SIZE(WINDOW_W, WINDOW_H, WINDOW_W, WINDOW_H);
+
+event (int,int) e_msg;
+event (int,int,int) drawLine;
+
+var int gn;
+var int gl=_;
+
+code/call GetParentAddress(var int address) -> int do       
+    if address==11 then
+        escape 1;
+    else/if (address==12 or address==22) then
+        escape 2;
+    else
+        escape 0;
+    end
+end
+
+code/await RedNode(var integer address) -> none do
+    var int x=_;
+    var int y=_;
+
+    //get x and y from address
+    if address==1 then
+        x = -250;
+        y = 50;
+    else/if address==2 then
+        x = 150;
+        y = 50;
+    else/if address==11 then
+        x = -400;
+        y = -150;
+    else/if address==12 then
+        x =  0;
+        y = -150;
+    else/if address==22 then
+        x =  250;
+        y = -150;
+    end
+
+    emit outer.drawLine(call GetParentAddress(address), x, y);
+    emit GRAPHICS_SET_ANCHOR(HANCHOR_LEFT, VANCHOR_BOTTOM);
+    emit GRAPHICS_SET_COLOR_NAME(COLOR_RED);
+    emit GRAPHICS_DRAW_RECT(x, y, 20, 20);
+    emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
+
+    par/or do
+        loop do
+            var int xs=_;
+            var int ys=_;
+            var int addressDrawLine=_;
+            (addressDrawLine,xs,ys) = await outer.drawLine until addressDrawLine==address;
+
+            // draw line from the node to the son
+            emit GRAPHICS_DRAW_LINE(x,y,xs,ys);
+            outer.gl = outer.gl+1;
+        end
+    with
+        var int addressMsg;
+        var int sensorValue;
+        (addressMsg, sensorValue) = await outer.e_msg until addressMsg==address;
+    end
+end
+
+
+code/await MasterNode(none) -> none do
+    var int x = 0;
+    var int y = 200;
+
+    emit GRAPHICS_SET_ANCHOR(HANCHOR_LEFT, VANCHOR_BOTTOM);
+    emit GRAPHICS_DRAW_RECT(x, y, 20, 20);
+
+    loop do
+        var int xs=_;
+        var int ys=_;
+        var int addressDrawLine=_;
+        (addressDrawLine,xs,ys) = await outer.drawLine until addressDrawLine==0;
+
+        // draw line from the node to the son
+        emit GRAPHICS_DRAW_LINE(x,y,xs,ys);
+        outer.gl=outer.gl+1;
+    end    
+end
+
+pool[] RedNode redNodes;
+
+code/await Node(var integer address) -> none do
+    var int x=_;
+    var int y=_;
+    var int count=0;
+    var int sensorValue=_;
+
+    //get x and y from address
+    if address==1 then
+        x = -250;
+        y = 50;
+    else/if address==2 then
+        x = 150;
+        y = 50;
+    else/if address==11 then
+        x = -400;
+        y = -150;
+    else/if address==12 then
+        x =  0;
+        y = -150;
+    else/if address==22 then
+        x =  250;
+        y = -150;
+    end
+
+    //clear functions
+    code/call ClearAll(none) -> none do        
+        emit GRAPHICS_SET_COLOR_NAME(COLOR_BLACK);
+        emit GRAPHICS_DRAW_RECT(outer.x, outer.y, 20, 20);
+        emit GRAPHICS_DRAW_RECT(outer.x + 25, outer.y-30, 130, 50);
+        emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
+    end
+    code/call ClearText(none) -> none do        
+        emit GRAPHICS_SET_COLOR_NAME(COLOR_BLACK);
+        emit GRAPHICS_DRAW_RECT(outer.x + 25, outer.y-30, 130, 50);
+        emit GRAPHICS_SET_COLOR_NAME(COLOR_WHITE);
+    end
+
+    //check if a point is inside a rct
+    code/call Rect_vs_Point(var int rx, var int ry, var int px, var int py) -> bool do
+        var Rect rct = val Rect(rx,ry,20,20);
+        var Point pt = val Point(px,py);
+                
+        escape _SDL_Rect_vs_Point(&&rct as _SDL_Rect&&, &&pt as _SDL_Point&&) == 1;
+    end    
+
+    //draw fixed white box, which represents the node
+    emit GRAPHICS_SET_ANCHOR(HANCHOR_LEFT, VANCHOR_BOTTOM);
+    emit GRAPHICS_DRAW_RECT(x, y, 20, 20);
+
+    //pede para o pai desenhar uma linha para mim
+    outer.gl=0;
+    emit outer.drawLine(call GetParentAddress(address), x, y);
+    if (outer.gl==0) then
+        spawn RedNode(call GetParentAddress(address)) in outer.redNodes;
+        emit outer.drawLine(call GetParentAddress(address), x, y);
+    end
+
+    //clear before finalize
+    do finalize with 
+        //_printf("\n\n%d finalize\n\n", address);
+        call ClearAll();
+        spawn RedNode(address) in outer.redNodes;
+    end
+
+    //_printf("the node %d was created and is waiting for a message\n", address);
+    
+    event none toggleInfo;
+    event none redraw;
+    par/or do
+        loop do
+            par/or do
+                await 15s;
+                break;
+            with
+                var int addressMsg;
+                (addressMsg, sensorValue) = await outer.e_msg until addressMsg==address;
+                
+                //_printf("a message arrived (%d)\n", addressMsg);
+                
+                count = count + 1;
+                outer.gn = outer.gn + 1;
+                emit redraw;
+            end
+        end
+    with
+        loop do
+            // show
+            watching toggleInfo do
+                loop do
+                    call ClearText();
+
+                    emit GRAPHICS_SET_ANCHOR(HANCHOR_LEFT, VANCHOR_TOP);
+
+                    emit GRAPHICS_SET_WRITE_CURSOR(x + 25, y+20);
+                    var[6] byte str=_;
+                    call String_Append_INT(&str, address, _);
+                    emit GRAPHICS_WRITE("address: ");
+                    emit GRAPHICS_WRITELN(&&(str[0]) as _char&&);
+
+                    $str = 0;
+                    call String_Append_INT(&str, count, _);
+                    emit GRAPHICS_WRITE("received messages: ");
+                    emit GRAPHICS_WRITELN(&&(str[0]) as _char&&);
+
+                    $str = 0;
+                    call String_Append_INT(&str, sensorValue, _);
+                    emit GRAPHICS_WRITE("sensor value: ");
+                    emit GRAPHICS_WRITELN(&&(str[0]) as _char&&);
+
+                    emit GRAPHICS_SET_ANCHOR(HANCHOR_LEFT, VANCHOR_BOTTOM);
+
+                    await redraw;
+                end
+            end
+
+            // hide
+            call ClearText();
+
+            await toggleInfo;
+        end
+    with
+        loop do
+            var int xc=0;
+            var int yc=0;
+            var int c=0;
+            
+            (c,xc,yc) = await MOUSE_CLICK until call Rect_vs_Point(x,y,xc,yc);
+
+            emit toggleInfo;
+        end
+    with
+        loop do
+            var int xs=_;
+            var int ys=_;
+            var int addressDrawLine=_;
+            (addressDrawLine,xs,ys) = await outer.drawLine until addressDrawLine==address;
+
+            // draw line from the node to the son
+            emit GRAPHICS_DRAW_LINE(x,y,xs,ys);
+            outer.gl=outer.gl+1;
+        end
+    end
+end
+
+//draw root node
+
+spawn MasterNode();
+
+pool[] Node nodes;
+
+every 1s do
+    //simulate a message arriving from address X
+
+    //Choose an address randomly
+    {int vet[5] = {1,2,11,12,22};};
+    var integer addressX = { vet[rand() % (5 + 1 - 1)] };
+
+    var integer sensorValue = { rand() % (99 + 1 - 1) + 1 };
+
+    _printf(">> Enviei a mensagem %d\n", addressX);
+    gn = 0;
+    emit e_msg(addressX, sensorValue);
+
+    if (gn == 0) then
+        spawn Node(addressX) in nodes;
+        emit e_msg(addressX, sensorValue);
+    end
+end
